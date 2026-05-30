@@ -24,4 +24,4 @@ services:
     env: postgresql
     plan: free
     ipAllowList: []
-    version: "15"
+ 
