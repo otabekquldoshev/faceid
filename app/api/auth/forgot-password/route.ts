@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserByEmail, getUserByUsername, hashPassword, storeOTP, verifyOTP, updateUserPassword, logAuthAction } from '@/lib/auth-utils'
 import { checkRateLimit, rateLimitConfig, rateLimitResponse } from '@/lib/rate-limit'
-import { sendOTPViaTelegram } from '@/lib/telegram-bot'
-
-function isDatabaseConnectionError(error: unknown) {
-  if (error instanceof AggregateError) return true
-
-  const message = error instanceof Error ? error.message : String(error)
-  return /ECONNREFUSED|Connection terminated|connect/i.test(message)
-}
+import { getTelegramTargetChatId, sendOTPViaTelegram } from '@/lib/telegram-bot'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,11 +34,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Bunday foydalanuvchi topilmadi.' }, { status: 404 })
       }
 
-      const resetChatId = String(user.telegram_chat_id || telegramChatId || '').trim()
+      const resetChatId = getTelegramTargetChatId(user.telegram_chat_id || telegramChatId)
 
       if (!resetChatId) {
         return NextResponse.json({
-          error: 'Bu accountga Telegram Chat ID bog‘lanmagan. Qaytadan ro‘yxatdan o‘ting yoki administratorga murojaat qiling.',
+          error: 'Telegram Chat ID topilmadi. .env.local ichida TELEGRAM_CHAT_ID ni kiriting yoki qaytadan ro‘yxatdan o‘ting.',
         }, { status: 400 })
       }
 
@@ -100,11 +94,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid stage' }, { status: 400 })
   } catch (error) {
-    console.error('[v0] Forgot password error:', error)
+    console.error('[auth-portal] Forgot password error:', error)
     if (isDatabaseConnectionError(error)) {
-      return NextResponse.json({
-        error: 'Ma’lumotlar bazasiga ulanib bo‘lmadi. Terminalda npm run db:start buyrug‘ini ishga tushiring va qayta urinib ko‘ring.',
-      }, { status: 503 })
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
     }
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

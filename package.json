@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https --experimental-https-key certificates/localhost-key.pem --experimental-https-cert certificates/localhost.pem",
+    "dev": "next dev --webpack --experimental-https --experimental-https-key certificates/localhost-key.pem --experimental-https-cert certificates/localhost.pem",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "db:setup": "node scripts/setup-local-db.js",
-    "db:start": "/usr/lib/postgresql/18/bin/pg_ctl -D .postgres-data -l .postgres-data/postgres.log -o \"-k /tmp\" start",
+    "db:start": "node scripts/start-local-db.js",
     "db:stop": "/usr/lib/postgresql/18/bin/pg_ctl -D .postgres-data stop",
-    "db:migrate": "node scripts/run-migration.js"
+    "db:migrate": "node scripts/run-migration.js",
+    "telegram:sync-chat": "node scripts/sync-telegram-chat-id.js",
+    "telegram:test": "node scripts/test-telegram.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

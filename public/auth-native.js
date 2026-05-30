@@ -490,7 +490,7 @@
       inputField('Foydalanuvchi nomi', 'username', 'text', 'username123', 'username', state.username) +
       inputField('Email', 'email', 'email', 'you@example.com', 'email', state.email) +
       '</div>' +
-      inputField('Telegram Chat ID', 'telegramChatId', 'text', '6462727345', '', state.telegramChatId) +
+      inputField('Telegram Chat ID', 'telegramChatId', 'text', 'masalan: 123456789', '', state.telegramChatId) +
       '<div class="grid gap-4 sm:grid-cols-2">' +
       inputField('Parol', 'password', 'password', 'Parolingizni kiriting', 'new-password', state.password) +
       inputField('Parolni tasdiqlash', 'confirmPassword', 'password', 'Parolingizni qayta kiriting', 'new-password', state.confirmPassword) +

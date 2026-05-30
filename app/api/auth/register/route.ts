@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createUser, getUserByEmail, getUserByUsername, hashPassword, logAuthAction } from '@/lib/auth-utils'
 import { isValidFacialData } from '@/lib/facial-match'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, userId: user.id, message: 'Account created successfully' }, { status: 201 })
   } catch (error) {
-    console.error('[v0] Register error:', error)
+    console.error('[auth-portal] Register error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

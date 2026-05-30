@@ -26,7 +26,7 @@ loadLocalEnv()
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) {
-  console.error('[v0] Missing DATABASE_URL environment variable')
+  console.error('[auth-portal] Missing DATABASE_URL environment variable')
   process.exit(1)
 }
 
@@ -34,16 +34,16 @@ const pool = new Pool({ connectionString: databaseUrl })
 
 async function runMigration() {
   try {
-    console.log('[v0] Reading migration file...')
+    console.log('[auth-portal] Reading migration file...')
     const migrationPath = path.join(process.cwd(), 'scripts', '01-setup-auth-tables.sql')
     const sql = fs.readFileSync(migrationPath, 'utf-8')
 
-    console.log('[v0] Executing migration...')
+    console.log('[auth-portal] Executing migration...')
     await pool.query(sql)
 
-    console.log('[v0] Migration completed successfully!')
+    console.log('[auth-portal] Migration completed successfully!')
   } catch (err) {
-    console.error('[v0] Error running migration:', {
+    console.error('[auth-portal] Error running migration:', {
       message: err instanceof Error ? err.message : String(err),
       code: err && typeof err === 'object' && 'code' in err ? err.code : undefined,
       detail: err && typeof err === 'object' && 'detail' in err ? err.detail : undefined,

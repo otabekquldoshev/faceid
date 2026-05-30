@@ -29,3 +29,13 @@ export async function closePool() {
   if (!pool) return
   await pool.end()
 }
+
+export const DATABASE_UNAVAILABLE_MESSAGE =
+  'Ma’lumotlar bazasiga ulanib bo‘lmadi. Terminalda npm run db:start buyrug‘ini ishga tushiring va qayta urinib ko‘ring.'
+
+export function isDatabaseConnectionError(error: unknown) {
+  if (error instanceof AggregateError) return true
+
+  const message = error instanceof Error ? error.message : String(error)
+  return /ECONNREFUSED|Connection terminated|connect|connection refused|ETIMEDOUT|ENOTFOUND/i.test(message)
+}

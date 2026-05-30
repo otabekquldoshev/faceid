@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyOTP, createSessionToken } from '@/lib/auth-utils'
 import { checkRateLimit, rateLimitConfig, rateLimitResponse } from '@/lib/rate-limit'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,11 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('[v0] OTP verification error:', error)
+    console.error('[auth-portal] OTP verification error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json(
       { error: 'Failed to verify OTP' },
       { status: 500 }

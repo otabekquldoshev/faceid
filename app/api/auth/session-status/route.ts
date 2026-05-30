@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError, query } from '@/lib/db'
 
 const SUCCESS_REDIRECT_URL = 'https://my.gov.uz/uz'
 
@@ -50,7 +50,11 @@ export async function GET(request: NextRequest) {
       redirectUrl: completed ? SUCCESS_REDIRECT_URL : null,
     })
   } catch (error) {
-    console.error('[v0] Session status error:', error)
+    console.error('[auth-portal] Session status error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

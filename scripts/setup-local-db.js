@@ -27,11 +27,11 @@ function loadLocalEnv() {
 function ensurePostgresRunning() {
   try {
     execFileSync(PG_CTL, ['-D', DATA_DIR, 'status'], { stdio: 'pipe' })
-    console.log('[v0] PostgreSQL is already running.')
+    console.log('[auth-portal] PostgreSQL is already running.')
     return
   } catch {}
 
-  console.log('[v0] Starting local PostgreSQL...')
+  console.log('[auth-portal] Starting local PostgreSQL...')
   execFileSync(PG_CTL, ['-D', DATA_DIR, '-l', path.join(DATA_DIR, 'postgres.log'), '-o', '-k /tmp', 'start'], {
     stdio: 'inherit',
   })
@@ -69,11 +69,11 @@ function ensureDatabase() {
   ).trim() === '1'
 
   if (exists) {
-    console.log(`[v0] Database ${database} exists.`)
+    console.log(`[auth-portal] Database ${database} exists.`)
     return
   }
 
-  console.log(`[v0] Creating database ${database}...`)
+  console.log(`[auth-portal] Creating database ${database}...`)
   execFileSync(CREATEDB, ['-h', host, '-p', port, '-U', username, database], { env, stdio: 'inherit' })
 }
 

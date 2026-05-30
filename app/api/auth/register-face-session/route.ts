@@ -6,6 +6,7 @@ import {
 } from '@/lib/registration-face-store'
 import { isValidFacialData } from '@/lib/facial-match'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +70,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
-    console.error('[v0] Registration face session error:', error)
+    console.error('[auth-portal] Registration face session error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json({ error: 'Face ID sessiyasini qayta ishlashda xatolik yuz berdi.' }, { status: 500 })
   }
 }
@@ -93,7 +98,11 @@ export async function GET(request: NextRequest) {
       expiresAt: session.expiresAt,
     })
   } catch (error) {
-    console.error('[v0] Registration face status error:', error)
+    console.error('[auth-portal] Registration face status error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json({ error: 'Face ID sessiyasini tekshirishda xatolik yuz berdi.' }, { status: 500 })
   }
 }

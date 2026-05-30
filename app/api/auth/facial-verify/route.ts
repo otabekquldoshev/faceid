@@ -3,8 +3,8 @@ import { createJWT, generateOTP, logAuthAction, storeOTP } from '@/lib/auth-util
 import { compareFacialData, isValidFacialData } from '@/lib/facial-match'
 import { checkRateLimit, rateLimitConfig, rateLimitResponse } from '@/lib/rate-limit'
 import { analyzeLoginRisk } from '@/lib/risk-analysis'
-import { sendLoginNotification, sendRiskVerificationOTP } from '@/lib/telegram-bot'
-import { query } from '@/lib/db'
+import { getTelegramTargetChatId, sendLoginNotification, sendRiskVerificationOTP } from '@/lib/telegram-bot'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError, query } from '@/lib/db'
 import type { FacialDetectionData } from '@/lib/facial-detection'
 
 const SUCCESS_REDIRECT_URL = 'https://my.gov.uz/uz'
@@ -88,7 +88,9 @@ export async function POST(request: NextRequest) {
     const riskAnalysis = await analyzeLoginRisk(normalizedUserId, request, match.score)
 
     if (riskAnalysis.requiresStepUp) {
-      if (!user.telegram_chat_id) {
+      const targetChatId = getTelegramTargetChatId(user.telegram_chat_id || undefined)
+
+      if (!targetChatId) {
         await logAuthAction(
           normalizedUserId,
           'risk_step_up_failed_missing_chat_id',
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
           userAgent
         )
         return NextResponse.json(
-          { error: 'Qo‘shimcha verifikatsiya kerak, lekin Telegram Chat ID topilmadi.' },
+          { error: 'Qo‘shimcha verifikatsiya kerak, lekin Telegram Chat ID topilmadi. .env.local ichida TELEGRAM_CHAT_ID ni kiriting.' },
           { status: 400 }
         )
       }
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
       const riskOtp = generateOTP(6)
       await storeOTP(normalizedUserId, riskOtp, 5)
 
-      const otpSent = await sendRiskVerificationOTP(user.telegram_chat_id, user.username || 'Unknown', riskOtp, riskAnalysis)
+      const otpSent = await sendRiskVerificationOTP(targetChatId, user.username || 'Unknown', riskOtp, riskAnalysis)
       const allowDevelopmentOtp = process.env.NODE_ENV !== 'production'
 
       if (!otpSent && !allowDevelopmentOtp) {
@@ -160,8 +162,9 @@ export async function POST(request: NextRequest) {
       ['completed', sessionToken]
     )
 
-    if (user?.telegram_chat_id) {
-      await sendLoginNotification(user.telegram_chat_id, user.username || 'Unknown', new Date().toLocaleString())
+    const notificationChatId = getTelegramTargetChatId(user?.telegram_chat_id || undefined)
+    if (notificationChatId) {
+      await sendLoginNotification(notificationChatId, user.username || 'Unknown', new Date().toLocaleString())
     }
 
     const jwtToken = createJWT(normalizedUserId, session.id)
@@ -192,7 +195,11 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('[v0] Facial verification error:', error)
+    console.error('[auth-portal] Facial verification error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

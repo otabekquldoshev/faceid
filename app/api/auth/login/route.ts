@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findUserByUsernameOrEmail, storeOTP, logAuthAction, verifyPassword } from '@/lib/auth-utils'
 import { checkRateLimit, rateLimitConfig, rateLimitResponse } from '@/lib/rate-limit'
-import { sendOTPViaTelegram } from '@/lib/telegram-bot'
+import { getTelegramTargetChatId, sendOTPViaTelegram } from '@/lib/telegram-bot'
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseConnectionError } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,12 +77,12 @@ export async function POST(request: NextRequest) {
       await storeOTP(user.id, otp, 3)
       
       // Send OTP via Telegram
-      const targetChatId = user.telegram_chat_id
+      const targetChatId = getTelegramTargetChatId(user.telegram_chat_id || undefined)
 
       if (!targetChatId) {
         await logAuthAction(user.id, 'otp_send_failed_missing_chat_id', { identifier }, ipAddress, userAgent)
         return NextResponse.json({
-          error: 'This account has no Telegram Chat ID. Please register again or contact support.',
+          error: 'Telegram Chat ID topilmadi. .env.local ichida TELEGRAM_CHAT_ID ni kiriting yoki qaytadan ro‘yxatdan o‘ting.',
         }, { status: 400 })
       }
 
@@ -159,7 +160,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid stage' }, { status: 400 })
   } catch (error) {
-    console.error('[v0] Login error:', error)
+    console.error('[auth-portal] Login error:', error)
+    if (isDatabaseConnectionError(error)) {
+      return NextResponse.json({ error: DATABASE_UNAVAILABLE_MESSAGE }, { status: 503 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
